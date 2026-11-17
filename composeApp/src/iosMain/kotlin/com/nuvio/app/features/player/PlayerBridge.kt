@@ -50,6 +50,8 @@ interface NuvioPlayerBridge {
         enhancementUpscale: Boolean,
         /** Gentle line sharpening that also suits live-action film and series. */
         enhancementSharpen: Boolean,
+        /** Target display rate for mpv smooth-motion interpolation; 0 disables it. */
+        smoothMotionTargetFps: Int,
     )
     fun configureAudioOutput(audioOutput: String)
     fun setNightMode(enabled: Boolean, filter: String, label: String)

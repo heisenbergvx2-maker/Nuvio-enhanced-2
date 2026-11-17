@@ -2290,6 +2290,10 @@
     <string name="player_video_settings_deband_desc">Reduce color banding at a small performance cost.</string>
     <string name="player_video_settings_interpolation">Frame interpolation</string>
     <string name="player_video_settings_interpolation_desc">Smooth motion when mpv can use display sync cleanly.</string>
+    <string name="player_video_settings_smooth_motion">Smooth motion</string>
+    <string name="player_video_settings_smooth_motion_off_desc">Use the source frame rate.</string>
+    <string name="player_video_settings_smooth_motion_60_desc">Interpolate to 60 fps. Smoother camera pans, with a slight soap-opera look.</string>
+    <string name="player_video_settings_smooth_motion_120_desc">Interpolate to the display refresh rate (up to 120 fps on ProMotion). Smoothest motion, highest battery and heat.</string>
     <string name="player_video_settings_enhancement">Video enhancement</string>
     <string name="player_video_settings_anime_upscale">Anime4K upscaling</string>
     <string name="player_video_settings_anime_upscale_desc">Restore and upscale low-resolution video with Anime4K. Best for animation; costs GPU time and battery.</string>

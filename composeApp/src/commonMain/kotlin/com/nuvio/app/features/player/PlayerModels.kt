@@ -224,6 +224,30 @@ enum class IosTargetPrimaries(
     Bt2020("bt.2020", "BT.2020"),
 }
 
+/**
+ * Temporal smooth-motion target for the iOS mpv player.
+ *
+ * mpv mixes the two nearest source frames for every display refresh, so 24 fps
+ * footage can be presented at 60 or 120 Hz. This is temporal interpolation, not
+ * AI frame generation; the display's refresh rate caps the target.
+ */
+enum class IosSmoothMotionMode(
+    val targetFps: Int,
+    val label: String,
+) {
+    Off(0, "Off"),
+    Fps60(60, "60 fps"),
+    Fps120(120, "120 fps"),
+    ;
+
+    val enabled: Boolean get() = targetFps > 0
+
+    companion object {
+        fun fromStoredName(name: String?): IosSmoothMotionMode =
+            entries.firstOrNull { it.name == name } ?: Off
+    }
+}
+
 enum class IosTargetTransfer(
     val mpvValue: String,
     val label: String,

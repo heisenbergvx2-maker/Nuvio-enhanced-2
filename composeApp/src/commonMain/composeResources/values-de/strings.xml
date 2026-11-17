@@ -1242,4 +1242,8 @@
     <string name="player_video_settings_anime_upscale_desc">Stellt niedrig aufgelöstes Video mit Anime4K wieder her und skaliert es hoch. Am besten für Animation; kostet GPU-Leistung und Akku.</string>
     <string name="player_video_settings_line_sharpen">Linienschärfung</string>
     <string name="player_video_settings_line_sharpen_desc">Schärft Kanten sanft, auch bei Realfilmen und Serien. Weniger Artefakte als Anime4K bei echtem Filmmaterial.</string>
+    <string name="player_video_settings_smooth_motion">Flüssige Bewegung</string>
+    <string name="player_video_settings_smooth_motion_off_desc">Quell-Bildrate verwenden.</string>
+    <string name="player_video_settings_smooth_motion_60_desc">Auf 60 fps interpolieren. Weichere Schwenks, aber leichter Soap-Opera-Effekt.</string>
+    <string name="player_video_settings_smooth_motion_120_desc">Auf die Bildwiederholrate des Displays interpolieren (bis 120 fps bei ProMotion). Flüssigste Bewegung, höchster Akku- und Wärmeverbrauch.</string>
 </resources>

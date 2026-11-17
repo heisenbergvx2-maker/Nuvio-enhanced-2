@@ -793,6 +793,7 @@ internal object SettingsConfigTransfer {
         PlayerSettingsStorage.loadIosHdrComputePeakEnabled()?.let { put("ios_hdr_compute_peak_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadIosDebandEnabled()?.let { put("ios_deband_enabled", encodeSyncBoolean(it)) }
         PlayerSettingsStorage.loadIosInterpolationEnabled()?.let { put("ios_interpolation_enabled", encodeSyncBoolean(it)) }
+        PlayerSettingsStorage.loadIosSmoothMotionMode()?.let { put("ios_smooth_motion_mode", encodeSyncString(it)) }
         PlayerSettingsStorage.loadIosBrightness()?.let { put("ios_brightness", encodeSyncInt(it)) }
         PlayerSettingsStorage.loadIosContrast()?.let { put("ios_contrast", encodeSyncInt(it)) }
         PlayerSettingsStorage.loadIosSaturation()?.let { put("ios_saturation", encodeSyncInt(it)) }
@@ -926,6 +927,7 @@ internal object SettingsConfigTransfer {
         payload.decodeSyncBoolean("ios_hdr_compute_peak_enabled")?.let { PlayerSettingsStorage.saveIosHdrComputePeakEnabled(it) }
         payload.decodeSyncBoolean("ios_deband_enabled")?.let { PlayerSettingsStorage.saveIosDebandEnabled(it) }
         payload.decodeSyncBoolean("ios_interpolation_enabled")?.let { PlayerSettingsStorage.saveIosInterpolationEnabled(it) }
+        payload.decodeSyncString("ios_smooth_motion_mode")?.let { PlayerSettingsStorage.saveIosSmoothMotionMode(it) }
         payload.decodeSyncInt("ios_brightness")?.let { PlayerSettingsStorage.saveIosBrightness(it) }
         payload.decodeSyncInt("ios_contrast")?.let { PlayerSettingsStorage.saveIosContrast(it) }
         payload.decodeSyncInt("ios_saturation")?.let { PlayerSettingsStorage.saveIosSaturation(it) }

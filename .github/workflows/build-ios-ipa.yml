@@ -99,6 +99,20 @@ jobs:
         # back to their public defaults in build.gradle.kts.
         run: touch local.properties
 
+      - name: Configure TMDB API key
+        # Bakes the key into this build so providers/plugins work on every
+        # device without a personal key. The value is a repository secret and
+        # is never committed; GitHub masks it in the logs.
+        env:
+          TMDB_API_KEY: ${{ secrets.TMDB_API_KEY }}
+        run: |
+          if [[ -n "${TMDB_API_KEY}" ]]; then
+            printf '\nTMDB_API_KEY=%s\n' "${TMDB_API_KEY}" >> local.properties
+            echo "TMDB_API_KEY configured for this build."
+          else
+            echo "No TMDB_API_KEY secret set; plugins will require a personal key."
+          fi
+
       - name: Build unsigned Release IPA
         run: ./scripts/build-ios-ipa.sh
 

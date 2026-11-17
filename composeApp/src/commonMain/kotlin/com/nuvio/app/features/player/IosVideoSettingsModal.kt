@@ -38,13 +38,15 @@ import nuvio.composeapp.generated.resources.player_video_settings_enhancement
 import nuvio.composeapp.generated.resources.player_video_settings_gamma
 import nuvio.composeapp.generated.resources.player_video_settings_hdr_peak_detection
 import nuvio.composeapp.generated.resources.player_video_settings_hdr_peak_detection_desc
-import nuvio.composeapp.generated.resources.player_video_settings_interpolation
-import nuvio.composeapp.generated.resources.player_video_settings_interpolation_desc
 import nuvio.composeapp.generated.resources.player_video_settings_line_sharpen
 import nuvio.composeapp.generated.resources.player_video_settings_line_sharpen_desc
 import nuvio.composeapp.generated.resources.player_video_settings_output_preset
 import nuvio.composeapp.generated.resources.player_video_settings_reset_tuning
 import nuvio.composeapp.generated.resources.player_video_settings_saturation
+import nuvio.composeapp.generated.resources.player_video_settings_smooth_motion
+import nuvio.composeapp.generated.resources.player_video_settings_smooth_motion_120_desc
+import nuvio.composeapp.generated.resources.player_video_settings_smooth_motion_60_desc
+import nuvio.composeapp.generated.resources.player_video_settings_smooth_motion_off_desc
 import nuvio.composeapp.generated.resources.player_video_settings_title
 import nuvio.composeapp.generated.resources.player_video_settings_tone_mapping
 import org.jetbrains.compose.resources.stringResource
@@ -134,12 +136,23 @@ internal fun IosVideoSettingsModal(
                         onSettingsChanged()
                     },
                 )
-                ToggleRow(
-                    title = stringResource(Res.string.player_video_settings_interpolation),
-                    description = stringResource(Res.string.player_video_settings_interpolation_desc),
-                    checked = settings.iosInterpolationEnabled,
-                    onCheckedChange = {
-                        PlayerSettingsRepository.setIosInterpolationEnabled(it)
+                OptionGroup(
+                    title = stringResource(Res.string.player_video_settings_smooth_motion),
+                    options = IosSmoothMotionMode.entries,
+                    selected = settings.iosSmoothMotionMode,
+                    label = { it.label },
+                    description = { mode ->
+                        when (mode) {
+                            IosSmoothMotionMode.Off ->
+                                stringResource(Res.string.player_video_settings_smooth_motion_off_desc)
+                            IosSmoothMotionMode.Fps60 ->
+                                stringResource(Res.string.player_video_settings_smooth_motion_60_desc)
+                            IosSmoothMotionMode.Fps120 ->
+                                stringResource(Res.string.player_video_settings_smooth_motion_120_desc)
+                        }
+                    },
+                    onSelect = {
+                        PlayerSettingsRepository.setIosSmoothMotionMode(it)
                         onSettingsChanged()
                     },
                 )

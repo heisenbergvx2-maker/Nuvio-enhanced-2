@@ -611,7 +611,8 @@ private fun NuvioPlayerBridge.applyIosVideoOutputSettings(settings: PlayerSettin
             "toneMapping=${settings.iosToneMappingMode.mpvValue} hdrComputePeak=${settings.iosHdrComputePeakEnabled} " +
             "targetPrimaries=${settings.iosTargetPrimaries.mpvValue} targetTransfer=${settings.iosTargetTransfer.mpvValue} " +
             "extendedDynamicRange=${settings.iosExtendedDynamicRangeEnabled} audioOutput=${settings.iosAudioOutputMode.mpvValue} " +
-            "enhancementUpscale=${settings.androidAnimeUpscaleEnabled} enhancementSharpen=${settings.androidAnimeLineSharpenEnabled}",
+            "enhancementUpscale=${settings.androidAnimeUpscaleEnabled} enhancementSharpen=${settings.androidAnimeLineSharpenEnabled} " +
+            "smoothMotion=${settings.iosSmoothMotionMode.name}",
     )
     configureAudioOutput(audioOutput = settings.iosAudioOutputMode.mpvValue)
     configureVideoOutput(
@@ -623,13 +624,14 @@ private fun NuvioPlayerBridge.applyIosVideoOutputSettings(settings: PlayerSettin
         targetTransfer = settings.iosTargetTransfer.mpvValue,
         extendedDynamicRange = settings.iosExtendedDynamicRangeEnabled,
         deband = settings.iosDebandEnabled,
-        interpolation = settings.iosInterpolationEnabled,
+        interpolation = settings.iosSmoothMotionMode.enabled,
         brightness = settings.iosBrightness,
         contrast = settings.iosContrast,
         saturation = settings.iosSaturation,
         gamma = settings.iosGamma,
         enhancementUpscale = settings.androidAnimeUpscaleEnabled,
         enhancementSharpen = settings.androidAnimeLineSharpenEnabled,
+        smoothMotionTargetFps = settings.iosSmoothMotionMode.targetFps,
     )
 }
 

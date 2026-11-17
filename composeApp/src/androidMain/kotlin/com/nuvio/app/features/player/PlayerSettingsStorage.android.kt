@@ -143,6 +143,7 @@ actual object PlayerSettingsStorage {
     private const val iosHdrComputePeakEnabledKey = "ios_hdr_compute_peak_enabled"
     private const val iosDebandEnabledKey = "ios_deband_enabled"
     private const val iosInterpolationEnabledKey = "ios_interpolation_enabled"
+    private const val iosSmoothMotionModeKey = "ios_smooth_motion_mode"
     private const val iosBrightnessKey = "ios_brightness"
     private const val iosContrastKey = "ios_contrast"
     private const val iosSaturationKey = "ios_saturation"
@@ -220,6 +221,7 @@ actual object PlayerSettingsStorage {
         iosHdrComputePeakEnabledKey,
         iosDebandEnabledKey,
         iosInterpolationEnabledKey,
+        iosSmoothMotionModeKey,
         iosBrightnessKey,
         iosContrastKey,
         iosSaturationKey,
@@ -2014,6 +2016,13 @@ actual object PlayerSettingsStorage {
         saveIosBoolean(iosInterpolationEnabledKey, enabled)
     }
 
+    actual fun loadIosSmoothMotionMode(): String? =
+        preferences?.getString(ProfileScopedKey.of(iosSmoothMotionModeKey), null)
+
+    actual fun saveIosSmoothMotionMode(mode: String) {
+        preferences?.edit()?.putString(ProfileScopedKey.of(iosSmoothMotionModeKey), mode)?.apply()
+    }
+
     actual fun loadIosBrightness(): Int? = loadIosInt(iosBrightnessKey)
 
     actual fun saveIosBrightness(value: Int) {
@@ -2153,6 +2162,7 @@ actual object PlayerSettingsStorage {
         loadIosHdrComputePeakEnabled()?.let { put(iosHdrComputePeakEnabledKey, encodeSyncBoolean(it)) }
         loadIosDebandEnabled()?.let { put(iosDebandEnabledKey, encodeSyncBoolean(it)) }
         loadIosInterpolationEnabled()?.let { put(iosInterpolationEnabledKey, encodeSyncBoolean(it)) }
+        loadIosSmoothMotionMode()?.let { put(iosSmoothMotionModeKey, encodeSyncString(it)) }
         loadIosBrightness()?.let { put(iosBrightnessKey, encodeSyncInt(it)) }
         loadIosContrast()?.let { put(iosContrastKey, encodeSyncInt(it)) }
         loadIosSaturation()?.let { put(iosSaturationKey, encodeSyncInt(it)) }
@@ -2242,6 +2252,7 @@ actual object PlayerSettingsStorage {
         payload.decodeSyncBoolean(iosHdrComputePeakEnabledKey)?.let(::saveIosHdrComputePeakEnabled)
         payload.decodeSyncBoolean(iosDebandEnabledKey)?.let(::saveIosDebandEnabled)
         payload.decodeSyncBoolean(iosInterpolationEnabledKey)?.let(::saveIosInterpolationEnabled)
+        payload.decodeSyncString(iosSmoothMotionModeKey)?.let(::saveIosSmoothMotionMode)
         payload.decodeSyncInt(iosBrightnessKey)?.let(::saveIosBrightness)
         payload.decodeSyncInt(iosContrastKey)?.let(::saveIosContrast)
         payload.decodeSyncInt(iosSaturationKey)?.let(::saveIosSaturation)

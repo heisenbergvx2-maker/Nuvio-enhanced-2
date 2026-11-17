@@ -118,7 +118,8 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
         saturation: Int32,
         gamma: Int32,
         enhancementUpscale: Bool,
-        enhancementSharpen: Bool
+        enhancementSharpen: Bool,
+        smoothMotionTargetFps: Int32
     ) {
         ensurePlayerViewController().configureVideoOutput(
             hardwareDecoder: hardwareDecoder,
@@ -135,7 +136,8 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
             saturation: Int(saturation),
             gamma: Int(gamma),
             enhancementUpscale: enhancementUpscale,
-            enhancementSharpen: enhancementSharpen
+            enhancementSharpen: enhancementSharpen,
+            smoothMotionTargetFps: Int(smoothMotionTargetFps)
         )
     }
     func configureAudioOutput(audioOutput: String) {
@@ -434,6 +436,7 @@ final class MPVPlayerViewController: UIViewController {
         let gamma: Int
         let enhancementUpscale: Bool
         let enhancementSharpen: Bool
+        let smoothMotionTargetFps: Int
     }
 
     struct SubtitleStyleSettings {
@@ -618,7 +621,8 @@ final class MPVPlayerViewController: UIViewController {
                 saturation: settings.saturation,
                 gamma: settings.gamma,
                 enhancementUpscale: settings.enhancementUpscale,
-                enhancementSharpen: settings.enhancementSharpen
+                enhancementSharpen: settings.enhancementSharpen,
+                smoothMotionTargetFps: settings.smoothMotionTargetFps
             )
         }
         if let audioOutput = lastAudioOutput { setStringProperty("ao", audioOutput) }
@@ -805,6 +809,10 @@ final class MPVPlayerViewController: UIViewController {
         scalerBeforeEnhancement = nil
         downscalingCorrectionBeforeEnhancement = nil
         enhancementScalingApplied = false
+        appliedInterpolation = nil
+        appliedVideoSync = nil
+        appliedDisplayFpsOverride = nil
+        appliedTscale = nil
 
         var layerPointer = Int64(Int(bitPattern: Unmanaged.passUnretained(metalLayer).toOpaque()))
         checkError(mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &layerPointer))
@@ -813,7 +821,11 @@ final class MPVPlayerViewController: UIViewController {
         setSetupOption("gpu-context", "moltenvk")
         setSetupOption("hwdec", "videotoolbox")
         setSetupOption("hwdec-software-fallback", "300")
-        setSetupOption("hwdec-extra-frames", Self.isMemoryConstrained ? "1" : "3")
+        // Interpolation needs a few more decoder surfaces than plain playback;
+        // size the pool up front when smooth motion is requested at start.
+        let smoothMotionRequested = (lastVideoOutputSettings?.smoothMotionTargetFps ?? 0) > 0
+        let extraDecodeFrames = Self.isMemoryConstrained ? 1 : (smoothMotionRequested ? 5 : 3)
+        setSetupOption("hwdec-extra-frames", "\(extraDecodeFrames)")
         setSetupOption("ao", Self.defaultAudioOutput)
         setSetupOption("audio-exclusive", "yes")
         setSetupOption("audio-channels", "auto")
@@ -1481,7 +1493,8 @@ final class MPVPlayerViewController: UIViewController {
                 saturation: settings.saturation,
                 gamma: settings.gamma,
                 enhancementUpscale: settings.enhancementUpscale,
-                enhancementSharpen: settings.enhancementSharpen
+                enhancementSharpen: settings.enhancementSharpen,
+                smoothMotionTargetFps: settings.smoothMotionTargetFps
             )
         }
         if let audioOutput = lastAudioOutput { setStringProperty("ao", audioOutput) }
@@ -1543,7 +1556,8 @@ final class MPVPlayerViewController: UIViewController {
         saturation: Int,
         gamma: Int,
         enhancementUpscale: Bool,
-        enhancementSharpen: Bool
+        enhancementSharpen: Bool,
+        smoothMotionTargetFps: Int
     ) {
         lastVideoOutputSettings = VideoOutputSettings(
             hardwareDecoder: hardwareDecoder,
@@ -1560,7 +1574,8 @@ final class MPVPlayerViewController: UIViewController {
             saturation: saturation,
             gamma: gamma,
             enhancementUpscale: enhancementUpscale,
-            enhancementSharpen: enhancementSharpen
+            enhancementSharpen: enhancementSharpen,
+            smoothMotionTargetFps: smoothMotionTargetFps
         )
         metalLayer.wantsExtendedDynamicRangeContent = extendedDynamicRange
         guard mpv != nil else { return }
@@ -1573,7 +1588,7 @@ final class MPVPlayerViewController: UIViewController {
         setStringProperty("target-trc", targetTransfer)
         // Both enhancement modes benefit from debanding on low-bitrate sources.
         setStringProperty("deband", (deband || enhancementUpscale || enhancementSharpen) ? "yes" : "no")
-        setStringProperty("interpolation", interpolation ? "yes" : "no")
+        applySmoothMotion(interpolation: interpolation, targetFps: smoothMotionTargetFps)
         setVideoEqualizer("brightness", brightness)
         setVideoEqualizer("contrast", contrast)
         setVideoEqualizer("saturation", saturation)
@@ -1604,6 +1619,11 @@ final class MPVPlayerViewController: UIViewController {
     private var scalerBeforeEnhancement: String?
     private var downscalingCorrectionBeforeEnhancement: String?
     private var enhancementScalingApplied = false
+
+    private var appliedInterpolation: String?
+    private var appliedVideoSync: String?
+    private var appliedDisplayFpsOverride: String?
+    private var appliedTscale: String?
 
     /// Applies the optional video enhancement that now works for every content
     /// type, not only for anime.
@@ -1685,6 +1705,61 @@ final class MPVPlayerViewController: UIViewController {
         guard appliedCorrectDownscaling != value else { return }
         appliedCorrectDownscaling = value
         setStringProperty("correct-downscaling", value)
+    }
+
+    // MARK: - Smooth motion (temporal interpolation)
+
+    /// Drives mpv's temporal frame interpolation towards [targetFps].
+    ///
+    /// This is mpv's smooth-motion mode: it mixes the two nearest source frames
+    /// for every display refresh, so 24 fps footage can be shown at 60 or 120
+    /// Hz. It is not AI frame generation. The target is capped by the display's
+    /// refresh rate; ProMotion iPhones report 120 Hz.
+    private func applySmoothMotion(interpolation: Bool, targetFps: Int) {
+        guard mpv != nil else { return }
+        let displayMaxFps = max(1, UIScreen.main.maximumFramesPerSecond)
+        if interpolation && targetFps > 0 {
+            let effectiveFps = min(targetFps, displayMaxFps)
+            // mpv silently disables interpolation unless video-sync uses a
+            // display-* mode, so configure that before enabling it.
+            setVideoSync("display-resample")
+            setInterpolation("yes")
+            setDisplayFpsOverride(String(effectiveFps))
+            setTscale("mitchell")
+            InAppLogBridge.shared.info(
+                tag: "MPV/iOS",
+                message: "smooth motion interpolation=yes target=\(effectiveFps) displayMax=\(displayMaxFps)"
+            )
+        } else {
+            setVideoSync("audio")
+            setInterpolation("no")
+            setDisplayFpsOverride("0")
+            InAppLogBridge.shared.info(tag: "MPV/iOS", message: "smooth motion interpolation=no")
+        }
+    }
+
+    private func setInterpolation(_ value: String) {
+        guard appliedInterpolation != value else { return }
+        appliedInterpolation = value
+        setStringProperty("interpolation", value)
+    }
+
+    private func setVideoSync(_ value: String) {
+        guard appliedVideoSync != value else { return }
+        appliedVideoSync = value
+        setStringProperty("video-sync", value)
+    }
+
+    private func setDisplayFpsOverride(_ value: String) {
+        guard appliedDisplayFpsOverride != value else { return }
+        appliedDisplayFpsOverride = value
+        setStringProperty("display-fps-override", value)
+    }
+
+    private func setTscale(_ value: String) {
+        guard appliedTscale != value else { return }
+        appliedTscale = value
+        setStringProperty("tscale", value)
     }
 
     private static func bundledEnhancementShaderPaths(for settings: EnhancementSettings) -> [String] {

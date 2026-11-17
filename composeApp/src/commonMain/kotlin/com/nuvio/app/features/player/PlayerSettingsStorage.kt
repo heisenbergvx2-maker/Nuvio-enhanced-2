@@ -224,6 +224,8 @@ internal expect object PlayerSettingsStorage {
     fun saveIosDebandEnabled(enabled: Boolean)
     fun loadIosInterpolationEnabled(): Boolean?
     fun saveIosInterpolationEnabled(enabled: Boolean)
+    fun loadIosSmoothMotionMode(): String?
+    fun saveIosSmoothMotionMode(mode: String)
     fun loadIosBrightness(): Int?
     fun saveIosBrightness(value: Int)
     fun loadIosContrast(): Int?

@@ -128,6 +128,7 @@ data class PlayerSettingsUiState(
     val iosHdrComputePeakEnabled: Boolean = true,
     val iosDebandEnabled: Boolean = false,
     val iosInterpolationEnabled: Boolean = false,
+    val iosSmoothMotionMode: IosSmoothMotionMode = IosSmoothMotionMode.Off,
     val iosBrightness: Int = 0,
     val iosContrast: Int = 0,
     val iosSaturation: Int = 0,
@@ -275,6 +276,7 @@ object PlayerSettingsRepository {
     private var iosHdrComputePeakEnabled = true
     private var iosDebandEnabled = false
     private var iosInterpolationEnabled = false
+    private var iosSmoothMotionMode = IosSmoothMotionMode.Off
     private var iosBrightness = 0
     private var iosContrast = 0
     private var iosSaturation = 0
@@ -399,6 +401,7 @@ object PlayerSettingsRepository {
         iosHdrComputePeakEnabled = true
         iosDebandEnabled = false
         iosInterpolationEnabled = false
+        iosSmoothMotionMode = IosSmoothMotionMode.Off
         iosBrightness = 0
         iosContrast = 0
         iosSaturation = 0
@@ -597,6 +600,9 @@ object PlayerSettingsRepository {
         iosHdrComputePeakEnabled = PlayerSettingsStorage.loadIosHdrComputePeakEnabled() ?: true
         iosDebandEnabled = PlayerSettingsStorage.loadIosDebandEnabled() ?: false
         iosInterpolationEnabled = PlayerSettingsStorage.loadIosInterpolationEnabled() ?: false
+        iosSmoothMotionMode = PlayerSettingsStorage.loadIosSmoothMotionMode()
+            ?.let { IosSmoothMotionMode.fromStoredName(it) }
+            ?: if (iosInterpolationEnabled) IosSmoothMotionMode.Fps60 else IosSmoothMotionMode.Off
         iosBrightness = PlayerSettingsStorage.loadIosBrightness() ?: 0
         iosContrast = PlayerSettingsStorage.loadIosContrast() ?: 0
         iosSaturation = PlayerSettingsStorage.loadIosSaturation() ?: 0
@@ -1530,6 +1536,21 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveIosInterpolationEnabled(enabled)
     }
 
+    /**
+     * Selects the smooth-motion target for iOS playback. mpv interpolates to the
+     * target (capped by the display refresh rate) while the mode is not [IosSmoothMotionMode.Off].
+     */
+    fun setIosSmoothMotionMode(mode: IosSmoothMotionMode) {
+        ensureLoaded()
+        if (iosSmoothMotionMode == mode) return
+        iosSmoothMotionMode = mode
+        // Keep the legacy boolean in sync so older settings exports stay coherent.
+        iosInterpolationEnabled = mode.enabled
+        publish()
+        PlayerSettingsStorage.saveIosSmoothMotionMode(mode.name)
+        PlayerSettingsStorage.saveIosInterpolationEnabled(mode.enabled)
+    }
+
     fun setIosBrightness(value: Int) {
         ensureLoaded()
         iosBrightness = value.coerceIn(-50, 50)
@@ -1566,6 +1587,7 @@ object PlayerSettingsRepository {
         iosGamma = 0
         iosDebandEnabled = false
         iosInterpolationEnabled = false
+        iosSmoothMotionMode = IosSmoothMotionMode.Off
         androidAnimeUpscaleEnabled = false
         androidAnimeLineSharpenEnabled = false
         publish()
@@ -1575,6 +1597,7 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveIosGamma(0)
         PlayerSettingsStorage.saveIosDebandEnabled(false)
         PlayerSettingsStorage.saveIosInterpolationEnabled(false)
+        PlayerSettingsStorage.saveIosSmoothMotionMode(IosSmoothMotionMode.Off.name)
         PlayerSettingsStorage.saveAndroidAnimeUpscaleEnabled(false)
         PlayerSettingsStorage.saveAndroidAnimeLineSharpenEnabled(false)
     }
@@ -1699,6 +1722,7 @@ object PlayerSettingsRepository {
             iosHdrComputePeakEnabled = iosHdrComputePeakEnabled,
             iosDebandEnabled = iosDebandEnabled,
             iosInterpolationEnabled = iosInterpolationEnabled,
+            iosSmoothMotionMode = iosSmoothMotionMode,
             iosBrightness = iosBrightness,
             iosContrast = iosContrast,
             iosSaturation = iosSaturation,
