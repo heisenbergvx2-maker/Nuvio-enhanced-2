@@ -181,6 +181,28 @@ internal fun PlaybackVideoSettings(
                     )
                 }
             }
+            SettingsSection(
+                title = stringResource(Res.string.player_video_settings_enhancement),
+                isTablet = isTablet,
+            ) {
+                SettingsGroup(isTablet = isTablet) {
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.player_video_settings_anime_upscale),
+                        description = stringResource(Res.string.player_video_settings_anime_upscale_desc),
+                        checked = settings.androidAnimeUpscaleEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setAndroidAnimeUpscaleEnabled,
+                    )
+                    SettingsGroupDivider(isTablet = isTablet)
+                    SettingsSwitchRow(
+                        title = stringResource(Res.string.player_video_settings_line_sharpen),
+                        description = stringResource(Res.string.player_video_settings_line_sharpen_desc),
+                        checked = settings.androidAnimeLineSharpenEnabled,
+                        isTablet = isTablet,
+                        onCheckedChange = PlayerSettingsRepository::setAndroidAnimeLineSharpenEnabled,
+                    )
+                }
+            }
         }
     }
 

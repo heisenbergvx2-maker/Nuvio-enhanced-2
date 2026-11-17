@@ -116,7 +116,9 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
         brightness: Int32,
         contrast: Int32,
         saturation: Int32,
-        gamma: Int32
+        gamma: Int32,
+        enhancementUpscale: Bool,
+        enhancementSharpen: Bool
     ) {
         ensurePlayerViewController().configureVideoOutput(
             hardwareDecoder: hardwareDecoder,
@@ -131,7 +133,9 @@ final class MPVPlayerBridgeImpl: NSObject, NuvioPlayerBridge {
             brightness: Int(brightness),
             contrast: Int(contrast),
             saturation: Int(saturation),
-            gamma: Int(gamma)
+            gamma: Int(gamma),
+            enhancementUpscale: enhancementUpscale,
+            enhancementSharpen: enhancementSharpen
         )
     }
     func configureAudioOutput(audioOutput: String) {
@@ -428,6 +432,8 @@ final class MPVPlayerViewController: UIViewController {
         let contrast: Int
         let saturation: Int
         let gamma: Int
+        let enhancementUpscale: Bool
+        let enhancementSharpen: Bool
     }
 
     struct SubtitleStyleSettings {
@@ -610,7 +616,9 @@ final class MPVPlayerViewController: UIViewController {
                 brightness: settings.brightness,
                 contrast: settings.contrast,
                 saturation: settings.saturation,
-                gamma: settings.gamma
+                gamma: settings.gamma,
+                enhancementUpscale: settings.enhancementUpscale,
+                enhancementSharpen: settings.enhancementSharpen
             )
         }
         if let audioOutput = lastAudioOutput { setStringProperty("ao", audioOutput) }
@@ -787,6 +795,16 @@ final class MPVPlayerViewController: UIViewController {
 
         InAppLogBridge.shared.info(tag: "MPV/iOS", message: "Initializing mpv vo=gpu-next gpu-api=vulkan gpu-context=moltenvk hwdec=videotoolbox")
         checkError(mpv_request_log_messages(mpv, "warn"))
+
+        // A fresh core starts without shaders and with mpv's own scaler values;
+        // the remembered video-output settings are re-applied at the end of
+        // viewDidLoad().
+        appliedEnhancementShaderPaths = []
+        appliedScaler = nil
+        appliedCorrectDownscaling = nil
+        scalerBeforeEnhancement = nil
+        downscalingCorrectionBeforeEnhancement = nil
+        enhancementScalingApplied = false
 
         var layerPointer = Int64(Int(bitPattern: Unmanaged.passUnretained(metalLayer).toOpaque()))
         checkError(mpv_set_option(mpv, "wid", MPV_FORMAT_INT64, &layerPointer))
@@ -1461,7 +1479,9 @@ final class MPVPlayerViewController: UIViewController {
                 brightness: settings.brightness,
                 contrast: settings.contrast,
                 saturation: settings.saturation,
-                gamma: settings.gamma
+                gamma: settings.gamma,
+                enhancementUpscale: settings.enhancementUpscale,
+                enhancementSharpen: settings.enhancementSharpen
             )
         }
         if let audioOutput = lastAudioOutput { setStringProperty("ao", audioOutput) }
@@ -1521,7 +1541,9 @@ final class MPVPlayerViewController: UIViewController {
         brightness: Int,
         contrast: Int,
         saturation: Int,
-        gamma: Int
+        gamma: Int,
+        enhancementUpscale: Bool,
+        enhancementSharpen: Bool
     ) {
         lastVideoOutputSettings = VideoOutputSettings(
             hardwareDecoder: hardwareDecoder,
@@ -1536,7 +1558,9 @@ final class MPVPlayerViewController: UIViewController {
             brightness: brightness,
             contrast: contrast,
             saturation: saturation,
-            gamma: gamma
+            gamma: gamma,
+            enhancementUpscale: enhancementUpscale,
+            enhancementSharpen: enhancementSharpen
         )
         metalLayer.wantsExtendedDynamicRangeContent = extendedDynamicRange
         guard mpv != nil else { return }
@@ -1547,12 +1571,160 @@ final class MPVPlayerViewController: UIViewController {
         setStringProperty("hdr-compute-peak", hdrComputePeak ? "yes" : "no")
         setStringProperty("target-prim", targetPrimaries)
         setStringProperty("target-trc", targetTransfer)
-        setStringProperty("deband", deband ? "yes" : "no")
+        // Both enhancement modes benefit from debanding on low-bitrate sources.
+        setStringProperty("deband", (deband || enhancementUpscale || enhancementSharpen) ? "yes" : "no")
         setStringProperty("interpolation", interpolation ? "yes" : "no")
         setVideoEqualizer("brightness", brightness)
         setVideoEqualizer("contrast", contrast)
         setVideoEqualizer("saturation", saturation)
         setVideoEqualizer("gamma", gamma)
+        configureEnhancement(upscale: enhancementUpscale, sharpen: enhancementSharpen)
+    }
+
+    // MARK: - Video enhancement
+
+    private struct EnhancementSettings: Equatable {
+        let upscale: Bool
+        let sharpen: Bool
+    }
+
+    private static let animeRestoreShader = "Anime4K_Restore_CNN_S"
+    private static let animeThinShader = "Anime4K_Thin_HQ"
+    private static let animeUpscaleShader = "Anime4K_Upscale_CNN_x2_S"
+    private static let lineSharpenShader = "Nuvio_Line_Sharpen"
+    private static let enhancementShaderDirectory = "anime4k"
+
+    /// Shader list currently applied to the running mpv core. Re-setting
+    /// `glsl-shaders` makes mpv recompile the whole chain, so unchanged
+    /// settings (subtitle tweaks, equalizer moves, ...) must not touch it.
+    /// Reset whenever a new core is created in `setupMpv`.
+    private var appliedEnhancementShaderPaths: [String] = []
+    private var appliedScaler: String?
+    private var appliedCorrectDownscaling: String?
+    private var scalerBeforeEnhancement: String?
+    private var downscalingCorrectionBeforeEnhancement: String?
+    private var enhancementScalingApplied = false
+
+    /// Applies the optional video enhancement that now works for every content
+    /// type, not only for anime.
+    ///
+    /// Anime4K is tuned for animation: [animeRestoreShader] restores line detail
+    /// at the source resolution, [animeThinShader] thins the restored lines and
+    /// [animeUpscaleShader] then doubles the frame. Live action instead gets only
+    /// [lineSharpenShader], because the CNN passes produce visible artifacts on
+    /// real footage. The two switches are independent, so a user can combine
+    /// them. Shaders that are missing from the app bundle simply drop out of
+    /// the chain (and thus disable only that part of the option).
+    ///
+    /// - Parameter shaderPaths: Overrides the bundled shader lookup. Empty by
+    ///   default, which resolves the shaders from `Bundle.main`.
+    func configureEnhancement(upscale: Bool, sharpen: Bool, shaderPaths: [String] = []) {
+        let settings = EnhancementSettings(upscale: upscale, sharpen: sharpen)
+        let active = upscale || sharpen || !shaderPaths.isEmpty
+        let paths = shaderPaths.isEmpty ? Self.bundledEnhancementShaderPaths(for: settings) : shaderPaths
+
+        // ewa_lanczossharp leaves a cleaner base for the shader chain than the
+        // default bilinear scaler while staying much cheaper than the CNN passes.
+        applyEnhancementScaling(active: active)
+        if paths != appliedEnhancementShaderPaths {
+            appliedEnhancementShaderPaths = paths
+            let shaderList = paths.joined(separator: ":")
+            setStringProperty("glsl-shaders", shaderList)
+            // Read the value back on the mpv queue so the in-app log shows what
+            // mpv actually accepted (shader compile failures show up next to it).
+            withMpvOnQueue { [weak self] _ in
+                guard let self else { return }
+                let effective = self.getString("glsl-shaders") ?? ""
+                InAppLogBridge.shared.info(
+                    tag: "MPV/iOS",
+                    message: "enhancement applied glsl-shaders=\(effective)"
+                )
+            }
+        }
+
+        let shaderNames = paths.map { ($0 as NSString).lastPathComponent }.joined(separator: ",")
+        InAppLogBridge.shared.info(
+            tag: "MPV/iOS",
+            message: "enhancement upscale=\(upscale) sharpen=\(sharpen) " +
+                "scale=\(active ? "ewa_lanczossharp" : "app default") " +
+                "shaders=[\(shaderNames)]"
+        )
+    }
+
+    private func applyEnhancementScaling(active: Bool) {
+        if active {
+            if !enhancementScalingApplied {
+                // Remember the app's usual values (including the
+                // memory-constrained setup) so switching the enhancement off
+                // restores them exactly instead of guessing an mpv default.
+                scalerBeforeEnhancement = getString("scale") ?? "bilinear"
+                downscalingCorrectionBeforeEnhancement =
+                    getString("correct-downscaling") ?? (Self.isMemoryConstrained ? "no" : "yes")
+                enhancementScalingApplied = true
+            }
+            setScaler("ewa_lanczossharp")
+            setDownscalingCorrection("yes")
+        } else if enhancementScalingApplied {
+            enhancementScalingApplied = false
+            if let original = scalerBeforeEnhancement { setScaler(original) }
+            if let original = downscalingCorrectionBeforeEnhancement {
+                setDownscalingCorrection(original)
+            }
+            scalerBeforeEnhancement = nil
+            downscalingCorrectionBeforeEnhancement = nil
+        }
+    }
+
+    private func setScaler(_ value: String) {
+        guard appliedScaler != value else { return }
+        appliedScaler = value
+        setStringProperty("scale", value)
+    }
+
+    private func setDownscalingCorrection(_ value: String) {
+        guard appliedCorrectDownscaling != value else { return }
+        appliedCorrectDownscaling = value
+        setStringProperty("correct-downscaling", value)
+    }
+
+    private static func bundledEnhancementShaderPaths(for settings: EnhancementSettings) -> [String] {
+        var names: [String] = []
+        if settings.upscale {
+            // Restore and thin at source resolution, then upscale the cleaned-up
+            // frame; this matches the order the Android Anime4K pipeline uses.
+            names.append(contentsOf: [animeRestoreShader, animeThinShader, animeUpscaleShader])
+        }
+        if settings.sharpen {
+            names.append(lineSharpenShader)
+        }
+        return names.compactMap { name in
+            guard let path = bundledShaderPath(named: name) else {
+                InAppLogBridge.shared.warn(
+                    tag: "MPV/iOS",
+                    message: "enhancement shader missing: \(name).glsl"
+                )
+                return nil
+            }
+            return path
+        }
+    }
+
+    private static func bundledShaderPath(named name: String) -> String? {
+        // The Resources synchronized group flattens folder contents into the app
+        // bundle (the bundled fonts land there the same way), so look at the
+        // bundle root first and keep the folder variants as a fallback for a
+        // preserved folder reference.
+        Bundle.main.path(forResource: name, ofType: "glsl")
+            ?? Bundle.main.path(
+                forResource: name,
+                ofType: "glsl",
+                inDirectory: enhancementShaderDirectory
+            )
+            ?? Bundle.main.path(
+                forResource: name,
+                ofType: "glsl",
+                inDirectory: "Resources/\(enhancementShaderDirectory)"
+            )
     }
 
     func setNightMode(_ enabled: Bool, filter: (filter: String, label: String)) {

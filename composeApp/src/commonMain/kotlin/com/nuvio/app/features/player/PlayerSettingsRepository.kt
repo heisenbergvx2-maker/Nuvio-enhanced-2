@@ -1566,6 +1566,8 @@ object PlayerSettingsRepository {
         iosGamma = 0
         iosDebandEnabled = false
         iosInterpolationEnabled = false
+        androidAnimeUpscaleEnabled = false
+        androidAnimeLineSharpenEnabled = false
         publish()
         PlayerSettingsStorage.saveIosBrightness(0)
         PlayerSettingsStorage.saveIosContrast(0)
@@ -1573,6 +1575,8 @@ object PlayerSettingsRepository {
         PlayerSettingsStorage.saveIosGamma(0)
         PlayerSettingsStorage.saveIosDebandEnabled(false)
         PlayerSettingsStorage.saveIosInterpolationEnabled(false)
+        PlayerSettingsStorage.saveAndroidAnimeUpscaleEnabled(false)
+        PlayerSettingsStorage.saveAndroidAnimeLineSharpenEnabled(false)
     }
 
     private fun saveIosVideoOutputSettings() {

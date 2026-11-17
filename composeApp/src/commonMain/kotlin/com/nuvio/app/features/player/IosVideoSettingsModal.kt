@@ -28,15 +28,20 @@ import androidx.compose.ui.unit.sp
 import com.nuvio.app.core.ui.Slider
 import nuvio.composeapp.generated.resources.Res
 import nuvio.composeapp.generated.resources.action_close
+import nuvio.composeapp.generated.resources.player_video_settings_anime_upscale
+import nuvio.composeapp.generated.resources.player_video_settings_anime_upscale_desc
 import nuvio.composeapp.generated.resources.player_video_settings_brightness
 import nuvio.composeapp.generated.resources.player_video_settings_contrast
 import nuvio.composeapp.generated.resources.player_video_settings_deband
 import nuvio.composeapp.generated.resources.player_video_settings_deband_desc
+import nuvio.composeapp.generated.resources.player_video_settings_enhancement
 import nuvio.composeapp.generated.resources.player_video_settings_gamma
 import nuvio.composeapp.generated.resources.player_video_settings_hdr_peak_detection
 import nuvio.composeapp.generated.resources.player_video_settings_hdr_peak_detection_desc
 import nuvio.composeapp.generated.resources.player_video_settings_interpolation
 import nuvio.composeapp.generated.resources.player_video_settings_interpolation_desc
+import nuvio.composeapp.generated.resources.player_video_settings_line_sharpen
+import nuvio.composeapp.generated.resources.player_video_settings_line_sharpen_desc
 import nuvio.composeapp.generated.resources.player_video_settings_output_preset
 import nuvio.composeapp.generated.resources.player_video_settings_reset_tuning
 import nuvio.composeapp.generated.resources.player_video_settings_saturation
@@ -135,6 +140,30 @@ internal fun IosVideoSettingsModal(
                     checked = settings.iosInterpolationEnabled,
                     onCheckedChange = {
                         PlayerSettingsRepository.setIosInterpolationEnabled(it)
+                        onSettingsChanged()
+                    },
+                )
+
+                Text(
+                    text = stringResource(Res.string.player_video_settings_enhancement),
+                    color = MaterialTheme.colorScheme.onSurface,
+                    fontWeight = FontWeight.SemiBold,
+                )
+                ToggleRow(
+                    title = stringResource(Res.string.player_video_settings_anime_upscale),
+                    description = stringResource(Res.string.player_video_settings_anime_upscale_desc),
+                    checked = settings.androidAnimeUpscaleEnabled,
+                    onCheckedChange = {
+                        PlayerSettingsRepository.setAndroidAnimeUpscaleEnabled(it)
+                        onSettingsChanged()
+                    },
+                )
+                ToggleRow(
+                    title = stringResource(Res.string.player_video_settings_line_sharpen),
+                    description = stringResource(Res.string.player_video_settings_line_sharpen_desc),
+                    checked = settings.androidAnimeLineSharpenEnabled,
+                    onCheckedChange = {
+                        PlayerSettingsRepository.setAndroidAnimeLineSharpenEnabled(it)
                         onSettingsChanged()
                     },
                 )

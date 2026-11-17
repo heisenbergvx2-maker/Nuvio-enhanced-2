@@ -2290,6 +2290,11 @@
     <string name="player_video_settings_deband_desc">Reduce color banding at a small performance cost.</string>
     <string name="player_video_settings_interpolation">Frame interpolation</string>
     <string name="player_video_settings_interpolation_desc">Smooth motion when mpv can use display sync cleanly.</string>
+    <string name="player_video_settings_enhancement">Video enhancement</string>
+    <string name="player_video_settings_anime_upscale">Anime4K upscaling</string>
+    <string name="player_video_settings_anime_upscale_desc">Restore and upscale low-resolution video with Anime4K. Best for animation; costs GPU time and battery.</string>
+    <string name="player_video_settings_line_sharpen">Line sharpening</string>
+    <string name="player_video_settings_line_sharpen_desc">Gently sharpens edges, including live-action films and series. Fewer artifacts than Anime4K on real footage.</string>
     <string name="player_video_settings_brightness">Brightness</string>
     <string name="player_video_settings_contrast">Contrast</string>
     <string name="player_video_settings_saturation">Saturation</string>

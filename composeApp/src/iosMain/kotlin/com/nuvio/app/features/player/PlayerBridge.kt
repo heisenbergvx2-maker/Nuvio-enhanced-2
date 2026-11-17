@@ -46,6 +46,10 @@ interface NuvioPlayerBridge {
         contrast: Int,
         saturation: Int,
         gamma: Int,
+        /** Anime4K upscaling; works for animation and, when enabled, any video. */
+        enhancementUpscale: Boolean,
+        /** Gentle line sharpening that also suits live-action film and series. */
+        enhancementSharpen: Boolean,
     )
     fun configureAudioOutput(audioOutput: String)
     fun setNightMode(enabled: Boolean, filter: String, label: String)

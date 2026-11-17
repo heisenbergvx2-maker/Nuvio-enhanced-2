@@ -610,7 +610,8 @@ private fun NuvioPlayerBridge.applyIosVideoOutputSettings(settings: PlayerSettin
         "videoOutput hwdec=${settings.iosHardwareDecoderMode.mpvValue} targetColorspaceHint=${settings.iosTargetColorspaceHintEnabled} " +
             "toneMapping=${settings.iosToneMappingMode.mpvValue} hdrComputePeak=${settings.iosHdrComputePeakEnabled} " +
             "targetPrimaries=${settings.iosTargetPrimaries.mpvValue} targetTransfer=${settings.iosTargetTransfer.mpvValue} " +
-            "extendedDynamicRange=${settings.iosExtendedDynamicRangeEnabled} audioOutput=${settings.iosAudioOutputMode.mpvValue}",
+            "extendedDynamicRange=${settings.iosExtendedDynamicRangeEnabled} audioOutput=${settings.iosAudioOutputMode.mpvValue} " +
+            "enhancementUpscale=${settings.androidAnimeUpscaleEnabled} enhancementSharpen=${settings.androidAnimeLineSharpenEnabled}",
     )
     configureAudioOutput(audioOutput = settings.iosAudioOutputMode.mpvValue)
     configureVideoOutput(
@@ -627,6 +628,8 @@ private fun NuvioPlayerBridge.applyIosVideoOutputSettings(settings: PlayerSettin
         contrast = settings.iosContrast,
         saturation = settings.iosSaturation,
         gamma = settings.iosGamma,
+        enhancementUpscale = settings.androidAnimeUpscaleEnabled,
+        enhancementSharpen = settings.androidAnimeLineSharpenEnabled,
     )
 }
 

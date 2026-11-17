@@ -1237,4 +1237,9 @@
 <string name="settings_nav_bar_glass_lens_affect_tab_icons_description">Die Tab-Symbole und Beschriftungen werden beim Bewegen der Linse mit gebrochen und vergrößert.</string>
 <string name="settings_nav_bar_glass_lens_affect_floating_bar">Linse beeinflusst die schwebende Leiste</string>
 <string name="settings_nav_bar_glass_lens_affect_floating_bar_description">Die Linse bricht das Glas der schwebenden Leiste beim Bewegen.</string>
+    <string name="player_video_settings_enhancement">Video-Optimierung</string>
+    <string name="player_video_settings_anime_upscale">Anime4K-Upscaling</string>
+    <string name="player_video_settings_anime_upscale_desc">Stellt niedrig aufgelöstes Video mit Anime4K wieder her und skaliert es hoch. Am besten für Animation; kostet GPU-Leistung und Akku.</string>
+    <string name="player_video_settings_line_sharpen">Linienschärfung</string>
+    <string name="player_video_settings_line_sharpen_desc">Schärft Kanten sanft, auch bei Realfilmen und Serien. Weniger Artefakte als Anime4K bei echtem Filmmaterial.</string>
 </resources>

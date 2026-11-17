@@ -121,9 +121,25 @@ jobs:
             echo "- Signing: unsigned (AltStore/SideStore sideload)"
           } >> "${GITHUB_STEP_SUMMARY}"
 
+      - name: Upload IPA artifact
+        # Forks do not inherit releases, so keep the IPA downloadable from the
+        # run itself; the release step below is only for the upstream repo.
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuvio-ios-ipa
+          path: build/ios-ipa/*.ipa
+          if-no-files-found: error
+          retention-days: 14
+
       - name: Attach IPA to the v1.0.0 release
         # gh release upload only adds/replaces the asset; it never
         # rewrites the release body, so the v1.0.0 notes stay intact.
+        # A fork has no release, so skip the upload instead of failing.
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload v1.0.0 build/ios-ipa/*.ipa --clobber
+        run: |
+          if gh release view v1.0.0 >/dev/null 2>&1; then
+            gh release upload v1.0.0 build/ios-ipa/*.ipa --clobber
+          else
+            echo "No v1.0.0 release in this repository; the IPA is attached as a workflow artifact."
+          fi
